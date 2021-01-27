@@ -56,7 +56,7 @@ plt.grid()
 plt.show();
 
 # %% [markdown]
-# <img src="https://video.udacity-data.com/topher/2019/April/5cb8ef7d_ukf-highway-projected/ukf-highway-projected.gif" width=500 />
+# <img src="https://video.udacity-data.com/topher/2019/April/5cb8ef7d_ukf-highway-projected/ukf-highway-projected.gif" width=500 align="left"/>
 
 # %% [markdown]
 # ## Velocity Profiles
@@ -85,6 +85,8 @@ plt.show()
 # NIS value $\epsilon = \Delta_{z}^T \cdot S^{-1} \cdot \Delta_{z}$ follows a $\chi^2$ distribution. To make sure that 95% of the time the prediction doesn't exceeds the expected process variance the NIS should be below the threshold of 6 (2D lidar measurements) or 7.82 (3D radar measurements) respectively.
 #
 # This is checked in the following figures. Beside some spikes the NIS does not exceed the threshold, which means the deviation in the measurements doesn't exceed the modelled noise.
+#
+# Compare this to the results of the filter consistency checks in the [lessons video](https://classroom.udacity.com/nanodegrees/nd313/parts/da5e72fc-972d-42ae-bb76-fca3d3b2db06/modules/a247c8c2-7d8c-4298-a3d9-a5eee48805cc/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/b9251b43-1412-4c2b-8a0b-6ef3f1eb729a).
 
 # %%
 def plot_nis(series, name="radar", threshold=7.815):
@@ -92,10 +94,11 @@ def plot_nis(series, name="radar", threshold=7.815):
     plt.figure(figsize=(12,6))
     title = f"$NIS_{{{name}}}(t)$"
     plt.title(title)
-    plt.plot(series)
-    plt.hlines(threshold, xmin=0, xmax=len(df), color="red")
+    plt.plot(series, label=f"NIS {name}")
+    plt.hlines(threshold, xmin=0, xmax=len(df), color="red", label="95 %")
     plt.xlabel("t")
-    plt.ylabel("NIS")
+    plt.ylabel("NIS value")
+    plt.legend()
     plt.grid()
     plt.show()
 
