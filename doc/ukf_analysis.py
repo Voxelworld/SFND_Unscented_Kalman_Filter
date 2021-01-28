@@ -18,9 +18,9 @@
 #
 # This Jupyter notebook will analyse the Unscented Kalman Filter (UKF) computations of a single test run.
 #
-# To capture a test run of the highway scene, start the simulation by writing the terminal output to a CVS file:
+# To capture a test run of the highway scene, start the simulation with the `--log` flag to write the console or a CVS file:
 #
-# `$ ukf_highway.exe >ukf_log.csv`
+# `$ ukf_highway.exe --log [ukf_log.csv]`
 
 # %% [markdown]
 # ### Read log file
@@ -31,6 +31,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 df = pd.read_csv("ukf_log.csv", skiprows=0);
+#df = pd.read_csv("ukf_log_lidar.csv", skiprows=0);
+#df = pd.read_csv("ukf_log_radar.csv", skiprows=0);
 df.describe()
 
 # %%
@@ -120,3 +122,5 @@ plot_nis(df[df.sensor_type=="radar"].nis_radar, "radar", 7.815)
 
 # %%
 plot_nis(df[df.sensor_type=="lidar"].nis_lidar, "lidar", 6)
+
+# %%
