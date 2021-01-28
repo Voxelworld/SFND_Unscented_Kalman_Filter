@@ -142,6 +142,38 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     ////////////////////////////////////////////////////////////////
     x_.fill(0.0);
     P_ = MatrixXd::Identity(n_x_, n_x_);
+
+    if (meas_package.sensor_type_ == meas_package.LASER) {
+      double x = meas_package.raw_measurements_(0); // Lidar x (m)
+      double y = meas_package.raw_measurements_(1); // Lidar y (m)
+      x_ << x, y, 0.0, 0.0, 0.0;
+
+      // std_laspx_: standard deviation x in m
+      // std_laspy_: standard deviation y in m
+      P_(0, 0) = std_laspx_ * std_laspx_;
+      P_(1, 1) = std_laspy_ * std_laspy_;
+      P_(2, 2) = std_a_ * std_a_;
+      P_(3, 3) = sqrt(std_yawdd_);
+    }
+    else if (meas_package.sensor_type_ == meas_package.RADAR) {
+      double r = meas_package.raw_measurements_(0);     // Radar r (m)
+      double phi = meas_package.raw_measurements_(1);   // Radar phi (rad)
+      double r_dot = meas_package.raw_measurements_(2); // Radar r_dot (m/s)
+      x_ << cos(phi) * r, sin(phi) * r, r_dot, phi, 0.0;
+
+      // std_radr_  : standard deviation radius in m
+      // std_radphi_: standard deviation angle in rad
+      // std_radrd_ : standard deviation radius change in m/s
+      P_(0, 0) = std_radr_ * std_radr_;
+      P_(1, 1) = std_radr_ * std_radr_;
+      P_(2, 2) = std_radrd_ * std_radrd_;
+      P_(3, 3) = std_radphi_ * std_radphi_;
+    }
+
+    time_us_ = meas_package.timestamp_;
+    is_initialized_ = true;
+    LogState(0.0, meas_package);
+    return;
   }
 
   // Compute time step dt (s)
