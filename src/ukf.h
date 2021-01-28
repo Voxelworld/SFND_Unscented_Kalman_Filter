@@ -4,12 +4,15 @@
 #include "Eigen/Dense"
 #include "measurement_package.h"
 
+#include <string>
+
 class UKF {
  public:
   /**
    * Constructor
+   * @param name The human readable name if this instance.
    */
-  UKF();
+  UKF(std::string name = "");
 
   /**
    * Destructor
@@ -95,6 +98,14 @@ class UKF {
 
   // Sigma point spreading parameter
   double lambda_;
+
+  // Log the current state to external logger (used for parameter tuning)
+  void LogState(double delta_t, const MeasurementPackage &m);
+
+  // Fields used to log statistics
+  std::string name_;
+  double nis_radar_;
+  double nis_lidar_;
 };
 
 #endif  // UKF_H

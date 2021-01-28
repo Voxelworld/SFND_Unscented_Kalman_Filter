@@ -5,8 +5,28 @@
 //#include "render/render.h"
 #include "highway.h"
 
+#include <ostream>
+#include <string>
+
+// HACK: Using a global pointer to a stream for logging (disabled: nullptr),
+//       so this stream can be shared between all UKFs instances of the cars.
+//       Otherwise the interface of a bunch of functions would have had to be changed 
+//       in order to pass it through to the UKF class.
+std::ostream *s_logger = nullptr;
+
+
 int main(int argc, char** argv)
 {
+	// check for logging: --log [filename]
+	if (argc > 1 && std::string(argv[1]) == "--log")
+	{
+		if (argc > 2)
+			s_logger = new std::ofstream(argv[2]);
+		else
+		{
+			s_logger = &std::cout;
+		}
+	}
 
 	pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
 	viewer->setBackgroundColor(0, 0, 0);

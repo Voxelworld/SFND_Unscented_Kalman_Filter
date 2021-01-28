@@ -24,10 +24,13 @@ public:
 	// Visualize sensor measurements
 	bool visualize_lidar = true;
 	bool visualize_radar = true;
+	// Visualize the cars lidar points
 	bool visualize_pcd = false;
 	// Predict path in the future using UKF
-	double projectedTime = 0;
-	int projectedSteps = 0;
+	// Show the predicted position for the car in the future over x seconds:
+	double projectedTime = 0; // 2.0
+	// Number of positions used to interpolate the time interval:
+	int projectedSteps = 0; // 6
 	// --------------------------------
 
 	Highway(pcl::visualization::PCLVisualizer::Ptr& viewer)
@@ -52,7 +55,7 @@ public:
 		car1.setInstructions(car1_instructions);
 		if( trackCars[0] )
 		{
-			UKF ukf1;
+			UKF ukf1("car1");
 			car1.setUKF(ukf1);
 		}
 		traffic.push_back(car1);
@@ -66,7 +69,7 @@ public:
 		car2.setInstructions(car2_instructions);
 		if( trackCars[1] )
 		{
-			UKF ukf2;
+			UKF ukf2("car2");
 			car2.setUKF(ukf2);
 		}
 		traffic.push_back(car2);
@@ -90,7 +93,7 @@ public:
 		car3.setInstructions(car3_instructions);
 		if( trackCars[2] )
 		{
-			UKF ukf3;
+			UKF ukf3("car3");
 			car3.setUKF(ukf3);
 		}
 		traffic.push_back(car3);
