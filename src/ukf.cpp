@@ -107,6 +107,15 @@ UKF::UKF(std::string name) {
   for (int i = 1; i < 2 * n_aug_ + 1; ++i) {
     weights_(i) = 0.5 / (lambda_ + n_aug_);
   }
+
+  R_radar_ = MatrixXd(3, 3);
+  R_radar_ << std_radr_ * std_radr_, 0.0, 0.0,
+              0.0, std_radphi_ * std_radphi_, 0.0,
+              0.0, 0.0, std_radrd_ * std_radrd_;
+
+  R_lidar_ = MatrixXd(2, 2);
+  R_lidar_ << std_laspx_ * std_laspx_, 0.0,
+              0.0, std_laspy_ * std_laspy_;
 }
 
 UKF::~UKF() {}
@@ -338,7 +347,7 @@ void UKF::Prediction(double delta_t) {
 // Update state based on lidar measurement (cartesian coordinate system)
 //
 // Uses lidar data to update the belief about the object's position.
-// Calculate the lidar NIS.
+// Calculates the lidar NIS.
 void UKF::UpdateLidar(MeasurementPackage meas_package) {
   // Input: 2D lidar measurements x, y
   const int n_z = 2;
@@ -360,8 +369,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   // transform sigma points into measurement space
   for (int i = 0; i < Zsig.cols(); ++i) {
-    Zsig(0, i) = Xsig_pred_(0, i);
-    Zsig(1, i) = Xsig_pred_(1, i);
+    Zsig.col(i) = MapSigmaPointToLidarMeasurement(Xsig_pred_.col(i));
   }
 
   // calculate mean predicted measurement
@@ -378,15 +386,11 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   }
 
   // add measurement noise covariance matrix
-  MatrixXd R(n_z, n_z);
-  R << std_laspx_ * std_laspx_, 0.0, 
-       0.0, std_laspy_ * std_laspy_;
-
-  S += R;
+  S += R_lidar_;
 
   ///////////////////////////////////////////////////////////////////
   // 2) UpdateState
-  // Modify the state vector, x_, and covariance, P_.
+  VectorXd z_measurement = meas_package.raw_measurements_;
 
   // create matrix for cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x_, n_z);
@@ -403,7 +407,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   MatrixXd K = Tc * S.inverse();
 
   // residual
-  VectorXd z_diff = meas_package.raw_measurements_ - z_pred;
+  VectorXd z_diff = z_measurement - z_pred;
 
   // update state mean and covariance matrix
   x_ += K * z_diff;
@@ -439,15 +443,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   
   // transform sigma points into measurement space
   for (int i = 0; i < Zsig.cols(); ++i) {
-    const double p_x = Xsig_pred_(0, i);
-    const double p_y = Xsig_pred_(1, i);
-    const double v   = Xsig_pred_(2, i);
-    const double yaw = Xsig_pred_(3, i);
-
-    const double c = sqrt(p_x * p_x + p_y * p_y);
-    Zsig(0, i) = c; // r
-    Zsig(1, i) = atan2(p_y, p_x); // phi
-    Zsig(2, i) = (p_x * cos(yaw) * v + p_y * sin(yaw) * v) / c; // r_dot
+    Zsig.col(i) = MapSigmaPointToRadarMeasurement(Xsig_pred_.col(i));
   }
   
   // calculate mean predicted measurement
@@ -466,12 +462,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   }
 
   // add measurement noise covariance matrix
-  MatrixXd R(n_z, n_z);
-  R << std_radr_ * std_radr_, 0.0, 0.0,
-       0.0, std_radphi_ * std_radphi_, 0.0,
-       0.0, 0.0, std_radrd_ * std_radrd_;
-
-  S += R;
+  S += R_radar_;
 
   ///////////////////////////////////////////////////////////////////
   // 2) UpdateState (Lesson 4.30)
@@ -506,4 +497,26 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   ///////////////////////////////////////////////////////////////////
   // 3) Compute Normalized Innovation Squares (NIS)
   nis_radar_ = z_diff.transpose() * S.inverse() * z_diff;
+}
+
+inline
+Eigen::VectorXd UKF::MapSigmaPointToRadarMeasurement(const VectorXd& sigmaPoint)
+{
+  const double p_x = sigmaPoint(0);
+  const double p_y = sigmaPoint(1);
+  const double v   = sigmaPoint(2);
+  const double yaw = sigmaPoint(3);
+  const double d = sqrt(p_x * p_x + p_y * p_y);
+
+  VectorXd m = VectorXd(3); // r, phi, r_dot
+  m << d, atan2(p_y, p_x), (p_x * cos(yaw) * v + p_y * sin(yaw) * v) / d;
+  return m;
+}
+
+inline
+Eigen::VectorXd UKF::MapSigmaPointToLidarMeasurement(const VectorXd& sigmaPoint)
+{
+  VectorXd m = VectorXd(2); // x, y
+  m << sigmaPoint(0), sigmaPoint(1);
+  return m;
 }
