@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -23,55 +24,159 @@
 # `$ ukf_highway.exe --log [ukf_log.csv]`
 
 # %% [markdown]
-# ### Read log file
+# ### Read log files
 
 # %%
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("ukf_log.csv", skiprows=0);
-#df = pd.read_csv("ukf_log_lidar.csv", skiprows=0);
-#df = pd.read_csv("ukf_log_radar.csv", skiprows=0);
-df.describe()
+df_all = pd.read_csv("ukf_log.csv")
+df_lidar = pd.read_csv("ukf_log_lidar.csv")
+df_radar = pd.read_csv("ukf_log_radar.csv")
+df_gt = pd.read_csv("highway_traffic_steps.csv")
+df_all.describe()
 
 # %%
-df.head(4)
+df_all.head(3)
+
+# %%
+df_gt.head(1)
+
 
 # %% [markdown]
-# ## Trace Plot
+# ## Plotting Trace Maps
 #
-# The following figure shows the trace of the lidar measurements (circles) vs. the prediction (line) for each named instance.
+# This section shows different maps of the following scene:<br/>
+# <img src="https://video.udacity-data.com/topher/2019/April/5cb8ef7d_ukf-highway-projected/ukf-highway-projected.gif" width=500 />
 
 # %%
-plt.figure(figsize=(8,10))
-plt.title("Lidar Map: Sensor vs. Prediction")
-for i, name in enumerate(np.unique(df.name)):
-    df_i = df[df.name == name]
-    c = plt.cm.tab10(i)
-    plt.scatter(df_i.lidar_y, df_i.lidar_x, marker="o", s=50, color=c, alpha=0.1, label=f"{name} lidar")
-    plt.plot(df_i.x_py, df_i.x_px, color=c, label=f"{name} prediction")    
-plt.scatter([0],[0], marker="o", color="black", s=100, label="Ego car")
-plt.gca().invert_xaxis()
-plt.legend()
-plt.grid()
-plt.show();
+def plot_map(df, sensors=[]):
+    plt.title(f"Map: {sensors}")
+    for i, name in enumerate(np.unique(df.name)):
+        c = plt.cm.tab10(i)
+        df_i = df[df.name == name] # car's ukf measurements
+        df_t = df_gt[df_gt.name == name] # car's ground truth
+        if "lidar" in sensors:
+            plt.scatter(df_i.lidar_y, df_i.lidar_x, marker="o", s=50, color=c, alpha=0.1, label=f"{name} lidar")
+        if "radar" in sensors:
+            radar_x = df_i.radar_r * np.cos(df_i.radar_phi)
+            radar_y = df_i.radar_r * np.sin(df_i.radar_phi)
+            plt.scatter(radar_y, radar_x, marker="o", s=50, color=c, alpha=0.1, label=f"{name} radar")
+        if "prediction" in sensors:
+            plt.plot(df_i.x_py, df_i.x_px, linestyle=":", color=c, label=f"{name} prediction")
+        if "groundtruth" in sensors:
+            plt.plot(df_t.y, df_t.x, linestyle="-", color=c, alpha=0.5, label=f"{name} ground truth")
+    plt.scatter([0],[0], marker="o", color="black", s=100, label="Ego car")
+    plt.gca().invert_xaxis()
+    plt.legend()
+    plt.xlabel('m')
+    plt.ylabel('m')
+    plt.grid()
+
 
 # %% [markdown]
-# <img src="https://video.udacity-data.com/topher/2019/April/5cb8ef7d_ukf-highway-projected/ukf-highway-projected.gif" width=500 align="left"/>
+# ### Quality of Sensor Data
+# First we plot maps of the lidar and radar measurements, including the cars ground truth traces.
+
+# %%
+plt.figure(figsize=(12,12))
+plt.subplot(1,2,1)
+plot_map(df_all, ["lidar", "groundtruth"])
+plt.subplot(1,2,2)
+plot_map(df_all, ["radar", "groundtruth"])
+plt.show()
+
+# %% [markdown]
+# #### Notes
+# * Measurements are relative to the ego car, which is the fixed black dot at position (0,0).
+# * Radar positions are noisy, especially at larger distances. Radars angle measurements have a standard deviation of ~ 1.7°.
+
+# %% [markdown]
+# ## Kalman Filter Predictions
+# The next figure shows the Kalman Filter prediction for three different sensor scenarios:
+# * Result based on **lidar and radar** measurements
+# * using only **lidar** measurements
+# * using only **radar** measurements
+
+# %%
+plt.figure(figsize=(16,12))
+
+plt.subplot(1,3,1)
+plot_map(df_all, ["groundtruth", "prediction"])
+plt.title("Prediction based on Lidar & Radar")
+
+plt.subplot(1,3,2)
+plot_map(df_lidar, ["lidar", "prediction"])
+plt.title("Lidar-only Prediction")
+
+plt.subplot(1,3,3)
+plot_map(df_radar, ["radar", "prediction"])
+plt.title("Radar-only Prediction")
+plt.tight_layout()
+plt.show()
+
 
 # %% [markdown]
 # ## Velocity Profiles
 #
-# The following figure shown the corresponding speed profile of the 3 cars. Note: Speed is measured relative to the motion of the ego car.
+# The following figure shown the corresponding speed profile of the cars
 
 # %%
-plt.figure(figsize=(8,8))
-plt.title("Predicted Velocity Profiles")
-for name in np.unique(df.name):
-    plt.plot(df[df.name==name].x_v, label=name)
-plt.xlabel("t")
-plt.ylabel("m/s")
+def plot_speed(df):
+    for i, name in enumerate(np.unique(df.name)):
+        c = plt.cm.tab10(i)
+        df_i = df[df.name == name] # car's ukf measurements
+        plt.plot(df_i.t, df_i.x_v, color=c, label=name)
+
+        # Raw speed measurement in radar_phi direction, not projected to car direction x_jaw_angle:
+        #plt.plot(df_i.t, df_i.radar_dr, color=c, label=f"{name} radar speed") 
+
+        df_t = df_gt[df_gt.name == name] # car's ground truth
+        plt.plot(df_t.t, df_t.v, color=c, alpha=0.5, label=f"{name} ground truth")
+    plt.xlabel("t")
+    plt.ylabel("m/s")
+    plt.grid()
+    plt.legend()
+    
+plt.figure(figsize=(16,8))
+
+plt.subplot(1,3,1)
+plot_speed(df_all)
+plt.title("Speed prediction based on Lidar & Radar")
+
+plt.subplot(1,3,2)
+plot_speed(df_lidar)
+plt.title("Lidar-only Prediction")
+
+plt.subplot(1,3,3)
+plot_speed(df_radar)
+plt.title("Radar-only Prediction")
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# #### Notes
+# * TODO: Fig (c)/blue: Radar-only UKF can't catch up to true initial speed of v_car1 = 5 m/s. Check state init + covariance!
+#
+# #### Check: Radar data car1
+
+# %%
+name = "car1"
+c = plt.cm.tab10(0)
+
+df_i = df_radar[df_radar.name == name] # car's ukf measurements
+df_t = df_gt[df_gt.name == name] # car's ground truth
+
+plt.figure(figsize=(10,10))
+plt.title("Car1 speed measurements")
+plt.plot(df_t.t, df_t.v, alpha=0.5, label=f"{name} ground truth")
+plt.plot(df_i.t, df_i.radar_dr, label="car1 radar doppler")
+
+# 
+speed_x = df_i.radar_dr / np.cos(df_i.radar_phi)
+speed_x = np.clip(speed_x, -7, 7);
+plt.plot(df_i.t, speed_x, ":", label="car1 radar doppler_x")
 plt.grid()
 plt.legend()
 plt.show()
@@ -97,7 +202,7 @@ def plot_nis(series, name="radar", threshold=7.815):
     title = f"$NIS_{{{name}}}(t)$"
     plt.title(title)
     plt.plot(series, label=f"NIS {name}")
-    plt.hlines(threshold, xmin=0, xmax=len(df), color="red", label="95 %")
+    plt.hlines(threshold, xmin=0, xmax=max(series.index), color="red", label="95 %")
     plt.xlabel("t")
     plt.ylabel("NIS value")
     plt.legend()
@@ -115,12 +220,16 @@ def plot_nis(series, name="radar", threshold=7.815):
 # ### Radar
 
 # %%
-plot_nis(df[df.sensor_type=="radar"].nis_radar, "radar", 7.815)
+threshold = 7.815
+#plot_nis(df_all[df_all.sensor_type=="radar"].nis_radar, "radar", threshold)
+plot_nis(df_radar.nis_radar, "radar", threshold)
 
 # %% [markdown]
 # ### Lidar
 
 # %%
-plot_nis(df[df.sensor_type=="lidar"].nis_lidar, "lidar", 6)
+threshold = 6
+#plot_nis(df_all[df_all.sensor_type=="lidar"].nis_lidar, "lidar", threshold)
+plot_nis(df_lidar.nis_lidar, "lidar", threshold)
 
 # %%
