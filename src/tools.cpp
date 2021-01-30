@@ -141,10 +141,10 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr Tools::loadPcd(std::string file)
   return cloud;
 }
 
-void Tools::logStep(const Car &car)
+void Tools::logStep(long long timestamp, const Car &car)
 {
 	stringstream line;
-	line << car.name << "," << car.position.x << "," << car.position.y << ","
+	line << timestamp / 1.0E6 << "," << car.name << "," << car.position.x << "," << car.position.y << ","
 		 << car.velocity << "," << car.angle << "," << car.acceleration << std::endl;
 	log_csv.push_back(line.str());
 }
@@ -152,7 +152,7 @@ void Tools::logStep(const Car &car)
 void Tools::saveLog(std::string file)
 {
 	std::ofstream file_csv(file);
-	file_csv << "name,x,y,v,angle,acc" << std::endl;
+	file_csv << "t,name,x,y,v,angle,acc" << std::endl;
 	for (auto line : log_csv)
 	{
 		file_csv << line;

@@ -56,7 +56,7 @@ class Tools {
 	pcl::PointCloud<pcl::PointXYZ>::Ptr loadPcd(std::string file);
 	
 	// Logging used to evaluate KF performance
-	void logStep(const Car& car);
+	void logStep(long long timestamp, const Car& car);
 	void saveLog(std::string file);
 };
 
