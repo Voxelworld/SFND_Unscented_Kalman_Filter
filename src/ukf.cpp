@@ -157,26 +157,22 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       double y = meas_package.raw_measurements_(1); // Lidar y (m)
       x_ << x, y, 0.0, 0.0, 0.0;
 
-      // std_laspx_: standard deviation x in m
-      // std_laspy_: standard deviation y in m
+      // std_laspx_ = 0.15: standard deviation x in m
+      // std_laspy_ = 0.15: standard deviation y in m
       P_(0, 0) = std_laspx_ * std_laspx_;
       P_(1, 1) = std_laspy_ * std_laspy_;
-      P_(2, 2) = std_a_ * std_a_;
-      P_(3, 3) = sqrt(std_yawdd_);
     }
     else if (meas_package.sensor_type_ == meas_package.RADAR) {
       double r = meas_package.raw_measurements_(0);     // Radar r (m)
       double phi = meas_package.raw_measurements_(1);   // Radar phi (rad)
       double r_dot = meas_package.raw_measurements_(2); // Radar r_dot (m/s)
-      x_ << cos(phi) * r, sin(phi) * r, r_dot, phi, 0.0;
+      x_ << cos(phi) * r, sin(phi) * r, r_dot, 0.0, 0.0;
 
-      // std_radr_  : standard deviation radius in m
-      // std_radphi_: standard deviation angle in rad
-      // std_radrd_ : standard deviation radius change in m/s
-      P_(0, 0) = std_radr_ * std_radr_;
-      P_(1, 1) = std_radr_ * std_radr_;
-      P_(2, 2) = std_radrd_ * std_radrd_;
-      P_(3, 3) = std_radphi_ * std_radphi_;
+      // std_radr_   = 0.3 : standard deviation radius in m
+      // std_radphi_ = 0.03: standard deviation angle in rad
+      // std_radrd_  = 0.3 : standard deviation radius change in m/s
+      // P_(0, 0) = (std_radr_ + std_radphi_)**2; // Conv(G(0,s1), G(0,s2)) = G(0,s1+s2)
+      // P_(1, 1) = (std_radr_ + std_radphi_)**2;
     }
 
     time_us_ = meas_package.timestamp_;
@@ -193,15 +189,16 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Prediction(delta_t);
 
   // UPDATE STEP
-  if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+  if (use_laser_ && meas_package.sensor_type_ == MeasurementPackage::LASER)
+  {
     UpdateLidar(meas_package);
+    LogState(delta_t, meas_package);
   }
-  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+  if (use_radar_ && meas_package.sensor_type_ == MeasurementPackage::RADAR)
+  {
     UpdateRadar(meas_package);
+    LogState(delta_t, meas_package);
   }
-
-  //LogState(name_, delta_t, meas_package, nis_lidar_, nis_radar_, x_);
-  LogState(delta_t, meas_package);
 }
 
 void UKF::LogState(double delta_t, const MeasurementPackage &m)
