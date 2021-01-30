@@ -55,7 +55,7 @@ public:
 		car1.setInstructions(car1_instructions);
 		if( trackCars[0] )
 		{
-			UKF ukf1("car1");
+			UKF ukf1(car1.name);
 			car1.setUKF(ukf1);
 		}
 		traffic.push_back(car1);
@@ -69,7 +69,7 @@ public:
 		car2.setInstructions(car2_instructions);
 		if( trackCars[1] )
 		{
-			UKF ukf2("car2");
+			UKF ukf2(car2.name);
 			car2.setUKF(ukf2);
 		}
 		traffic.push_back(car2);
@@ -93,7 +93,7 @@ public:
 		car3.setInstructions(car3_instructions);
 		if( trackCars[2] )
 		{
-			UKF ukf3("car3");
+			UKF ukf3(car3.name);
 			car3.setUKF(ukf3);
 		}
 		traffic.push_back(car3);
@@ -143,7 +143,7 @@ public:
     			double v2 = sin(yaw)*v;
 				estimate << traffic[i].ukf.x_[0], traffic[i].ukf.x_[1], v1, v2;
 				tools.estimations.push_back(estimate);
-	
+				tools.logStep(traffic[i]);
 			}
 		}
 		viewer->addText("Accuracy - RMSE:", 30, 300, 20, 1, 1, 1, "rmse");

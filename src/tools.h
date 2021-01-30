@@ -42,6 +42,7 @@ class Tools {
 	// Members
 	std::vector<VectorXd> estimations;
 	std::vector<VectorXd> ground_truth;
+	std::vector<std::string> log_csv;
 	
 	double noise(double stddev, long long seedNum);
 	lmarker lidarSense(Car& car, pcl::visualization::PCLVisualizer::Ptr& viewer, long long timestamp, bool visualize);
@@ -54,6 +55,9 @@ class Tools {
 	void savePcd(typename pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string file);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr loadPcd(std::string file);
 	
+	// Logging used to evaluate KF performance
+	void logStep(const Car& car);
+	void saveLog(std::string file);
 };
 
 #endif /* TOOLS_H_ */
